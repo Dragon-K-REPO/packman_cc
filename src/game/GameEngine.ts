@@ -1,10 +1,9 @@
-import { GameState, PlayerState, Direction, TileType, Position } from './types';
+import { GameState, Direction, TileType, Position } from './types';
 import {
   PLAYER_BASE_SPEED,
   INITIAL_LIVES,
   DOT_SCORE,
   POWER_DOT_SCORE,
-  INVINCIBLE_DURATION,
   MAP_COLS,
 } from './constants';
 import { createTilemap, findPlayerSpawn, countDots, isWalkable } from './tilemap';
@@ -12,8 +11,8 @@ import { createTilemap, findPlayerSpawn, countDots, isWalkable } from './tilemap
 export class GameEngine {
   state: GameState;
   private moveAccumulator = 0;
-  private ghostMoveAccumulator = 0;
-  private itemSpawnTimer = 0;
+  /* package */ ghostMoveAccumulator = 0;
+  /* package */ itemSpawnTimer = 0;
 
   constructor() {
     this.state = this.createInitialState();
@@ -181,6 +180,29 @@ export class GameEngine {
 
   setDirection(dir: Direction) {
     this.state.player.nextDirection = dir;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  useSkill(_key: string) {
+    // Implemented in Task 6 (items)
+  }
+
+  nextRound() {
+    // Implemented in Task 9 (round progression)
+    // For now, restart the round
+    const prevScore = this.state.score;
+    const prevHighScore = this.state.highScore;
+    const prevLives = this.state.lives;
+    const prevRound = this.state.round;
+    this.state = this.createInitialState();
+    this.state.status = 'playing';
+    this.state.score = prevScore;
+    this.state.highScore = prevHighScore;
+    this.state.lives = prevLives;
+    this.state.round = prevRound + 1;
+    this.moveAccumulator = 0;
+    this.ghostMoveAccumulator = 0;
+    this.itemSpawnTimer = 0;
   }
 
   private loadHighScore(): number {
