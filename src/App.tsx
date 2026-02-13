@@ -4,6 +4,12 @@ import { InputHandler } from './game/input';
 import { renderGame } from './game/renderer';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from './game/constants';
 import { GameStatus } from './game/types';
+import { HUD } from './ui/HUD';
+import { MenuScreen } from './ui/MenuScreen';
+import { GameOverScreen } from './ui/GameOverScreen';
+import { RoundClearScreen } from './ui/RoundClearScreen';
+import { PauseOverlay } from './ui/PauseOverlay';
+import './ui/ui.css';
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -34,7 +40,6 @@ function App() {
 
     input.attach();
 
-    // Global key handler for menu/pause/restart
     const handleGlobalKeys = (e: KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') {
         if (engine.state.status === 'menu') {
@@ -45,10 +50,8 @@ function App() {
           handleRestart();
         } else if (engine.state.status === 'roundClear') {
           e.preventDefault();
-          if (typeof engine.nextRound === 'function') {
-            engine.nextRound();
-            setGameStatus('playing');
-          }
+          engine.nextRound();
+          setGameStatus('playing');
         }
       }
       if (e.key === 'Escape') {
@@ -65,22 +68,17 @@ function App() {
 
     const gameLoop = (timestamp: number) => {
       if (lastTimeRef.current === 0) lastTimeRef.current = timestamp;
-      const dt = Math.min(timestamp - lastTimeRef.current, 100); // cap at 100ms
+      const dt = Math.min(timestamp - lastTimeRef.current, 100);
       lastTimeRef.current = timestamp;
 
-      // Feed buffered input to engine
       const dir = input.consumeDirection();
       if (dir) engine.setDirection(dir);
 
-      // Feed skill input
       const skill = input.consumeSkill();
-      if (skill && typeof engine.useSkill === 'function') {
-        engine.useSkill(skill);
-      }
+      if (skill) engine.useSkill(skill);
 
       engine.update(dt);
 
-      // Sync React status for UI overlay changes
       if (engine.state.status !== gameStatus) {
         setGameStatus(engine.state.status);
       }
@@ -98,72 +96,20 @@ function App() {
     };
   }, [gameStatus, handleStart, handleRestart]);
 
-  const engine = engineRef.current;
-  const state = engine.getSnapshot();
+  const state = engineRef.current.getSnapshot();
 
   return (
     <div className="game-container">
       <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} />
 
-      {gameStatus === 'menu' && (
-        <div className="overlay-screen menu-screen">
-          <h1 className="neon-title">NEON PACMAN</h1>
-          <p className="neon-sub">Press ENTER to Start</p>
-        </div>
-      )}
-
-      {gameStatus === 'playing' && (
-        <div className="hud">
-          <div className="hud-left">
-            <span className="hud-score">SCORE: {state.score}</span>
-            <span className="hud-high">HI: {state.highScore}</span>
-          </div>
-          <div className="hud-center">
-            <span className="hud-round">ROUND {state.round}</span>
-          </div>
-          <div className="hud-right">
-            <span className="hud-lives">
-              {'♥'.repeat(state.lives)}
-              {'♡'.repeat(Math.max(0, 3 - state.lives))}
-            </span>
-          </div>
-          {state.activeEffects.length > 0 && (
-            <div className="hud-effects">
-              {state.activeEffects.map((e, i) => (
-                <span key={i} className={`effect-badge effect-${e.type}`}>
-                  {e.type.replace(/_/g, ' ')} {Math.ceil(e.remainingMs / 1000)}s
-                </span>
-              ))}
-            </div>
-          )}
-          {state.comboMultiplier > 1 && (
-            <span className="hud-combo">x{state.comboMultiplier.toFixed(1)}</span>
-          )}
-        </div>
-      )}
-
-      {gameStatus === 'paused' && (
-        <div className="overlay-screen pause-screen">
-          <h2 className="neon-title">PAUSED</h2>
-          <p className="neon-sub">Press ESC to Resume</p>
-        </div>
-      )}
-
+      {gameStatus === 'menu' && <MenuScreen />}
+      {gameStatus === 'playing' && <HUD state={state} />}
+      {gameStatus === 'paused' && <PauseOverlay />}
       {gameStatus === 'roundClear' && (
-        <div className="overlay-screen round-clear-screen">
-          <h2 className="neon-title">ROUND CLEAR!</h2>
-          <p className="neon-sub">Score: {state.score}</p>
-          <p className="neon-sub">Press ENTER for Next Round</p>
-        </div>
+        <RoundClearScreen score={state.score} round={state.round} />
       )}
-
       {gameStatus === 'gameOver' && (
-        <div className="overlay-screen gameover-screen">
-          <h2 className="neon-title">GAME OVER</h2>
-          <p className="neon-sub">Score: {state.score}</p>
-          <p className="neon-sub">High Score: {state.highScore}</p>
-          <p className="neon-sub">Press ENTER to Restart</p>
-        </div>
+        <GameOverScreen score={state.score} highScore={state.highScore} />
       )}
     </div>
   );

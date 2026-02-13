@@ -1,0 +1,221 @@
+/* === HUD === */
+.hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  color: #00ffff;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  text-shadow: 0 0 8px #00ffff;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hud-left,
+.hud-center,
+.hud-right {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hud-center {
+  align-items: center;
+}
+
+.hud-right {
+  align-items: flex-end;
+}
+
+.hud-lives {
+  color: #ff00ff;
+  text-shadow: 0 0 8px #ff00ff;
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+
+.hud-effects {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+
+.effect-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.effect-neon_freeze {
+  background: rgba(0, 255, 255, 0.15);
+  color: #00ffff;
+  border: 1px solid #00ffff;
+  text-shadow: 0 0 6px #00ffff;
+}
+
+.effect-phase_dash {
+  background: rgba(0, 255, 0, 0.15);
+  color: #00ff00;
+  border: 1px solid #00ff00;
+  text-shadow: 0 0 6px #00ff00;
+}
+
+.effect-combo_beacon {
+  background: rgba(255, 0, 255, 0.15);
+  color: #ff00ff;
+  border: 1px solid #ff00ff;
+  text-shadow: 0 0 6px #ff00ff;
+}
+
+.hud-combo {
+  position: absolute;
+  top: 30px;
+  right: 16px;
+  font-size: 20px;
+  font-weight: bold;
+  color: #ff00ff;
+  text-shadow: 0 0 12px #ff00ff;
+  animation: pulse 0.5s ease-in-out infinite alternate;
+}
+
+/* === Overlay Screens === */
+.overlay-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 10, 0.88);
+  z-index: 20;
+  gap: 16px;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.neon-title {
+  color: #00ffff;
+  font-size: 42px;
+  font-weight: bold;
+  text-shadow:
+    0 0 10px #00ffff,
+    0 0 20px #00ffff,
+    0 0 40px #0088ff;
+  letter-spacing: 4px;
+  animation: neonFlicker 2s ease-in-out infinite;
+}
+
+.neon-sub {
+  color: #ff00ff;
+  font-size: 16px;
+  text-shadow: 0 0 8px #ff00ff;
+  letter-spacing: 2px;
+}
+
+/* === Menu Screen === */
+.menu-screen .neon-title {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.menu-controls {
+  margin-top: 24px;
+}
+
+.menu-info {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.menu-hint {
+  color: #888;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-shadow: none;
+}
+
+/* === Game Over === */
+.gameover-screen .neon-title {
+  color: #ff0066;
+  text-shadow:
+    0 0 10px #ff0066,
+    0 0 20px #ff0066,
+    0 0 40px #ff0000;
+}
+
+.new-high {
+  color: #ffff00;
+  font-size: 18px;
+  font-weight: bold;
+  text-shadow:
+    0 0 10px #ffff00,
+    0 0 20px #ffaa00;
+  animation: pulse 0.6s ease-in-out infinite alternate;
+}
+
+/* === Round Clear === */
+.round-clear-screen .neon-title {
+  color: #00ff00;
+  text-shadow:
+    0 0 10px #00ff00,
+    0 0 20px #00ff00,
+    0 0 40px #00aa00;
+}
+
+/* === Pause === */
+.pause-screen {
+  background: rgba(10, 10, 10, 0.75);
+}
+
+/* === Blink text === */
+.blink {
+  animation: blink 1.2s step-end infinite;
+}
+
+/* === Animations === */
+@keyframes neonFlicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  52% {
+    opacity: 1;
+  }
+  54% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.15);
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
