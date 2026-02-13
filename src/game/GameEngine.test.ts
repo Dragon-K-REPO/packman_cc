@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { GameEngine } from './GameEngine';
+import { GHOST_BASE_SPEED } from './constants';
 
 describe('GameEngine', () => {
   let engine: GameEngine;
@@ -77,5 +78,61 @@ describe('GameEngine', () => {
     engine.state.player.invincibleMs = 1000;
     engine.update(500);
     expect(engine.state.player.invincibleMs).toBe(500);
+  });
+
+  describe('round progression', () => {
+    it('advances to next round preserving score and lives', () => {
+      engine.startGame();
+      engine.state.score = 500;
+      engine.state.lives = 2;
+      engine.state.dotsRemaining = 0;
+      engine.update(100);
+      expect(engine.state.status).toBe('roundClear');
+
+      engine.nextRound();
+      expect(engine.state.round).toBe(2);
+      expect(engine.state.status).toBe('playing');
+      expect(engine.state.score).toBe(500);
+      expect(engine.state.lives).toBe(2);
+    });
+
+    it('increases ghost count on new round', () => {
+      engine.startGame();
+      const r1Ghosts = engine.state.ghosts.length;
+      engine.nextRound();
+      expect(engine.state.ghosts.length).toBeGreaterThanOrEqual(r1Ghosts);
+    });
+
+    it('increases ghost speed on new round', () => {
+      engine.startGame();
+      engine.nextRound(); // round 2
+      expect(engine.state.ghosts[0].speed).toBeGreaterThan(GHOST_BASE_SPEED);
+    });
+
+    it('resets dots on new round', () => {
+      engine.startGame();
+      engine.state.dotsRemaining = 0;
+      engine.update(100);
+      engine.nextRound();
+      expect(engine.state.dotsRemaining).toBeGreaterThan(50);
+    });
+
+    it('triggers game over when lives reach 0', () => {
+      engine.startGame();
+      engine.state.lives = 1;
+      // Place ghost on player position
+      engine.state.ghosts = [
+        {
+          id: 0,
+          pos: { ...engine.state.player.pos },
+          direction: 'up',
+          behavior: 'chase',
+          speed: 3,
+          frozen: false,
+        },
+      ];
+      engine.checkGhostCollisions();
+      expect(engine.state.status).toBe('gameOver');
+    });
   });
 });
