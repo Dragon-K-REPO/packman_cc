@@ -4,9 +4,12 @@ import {
   INITIAL_LIVES,
   DOT_SCORE,
   POWER_DOT_SCORE,
+  INVINCIBLE_DURATION,
+  GHOST_SPEED_SCALE,
   MAP_COLS,
 } from './constants';
 import { createTilemap, findPlayerSpawn, countDots, isWalkable } from './tilemap';
+import { createGhosts, moveGhost } from './ghost';
 
 export class GameEngine {
   state: GameState;
@@ -50,6 +53,7 @@ export class GameEngine {
   startGame() {
     this.state = this.createInitialState();
     this.state.status = 'playing';
+    this.state.ghosts = createGhosts(this.state.tilemap, 2, 1);
     this.moveAccumulator = 0;
     this.ghostMoveAccumulator = 0;
     this.itemSpawnTimer = 0;
@@ -164,12 +168,43 @@ export class GameEngine {
     if (!hasDash) this.state.player.activeDash = false;
   }
 
-  updateGhosts(_dt: number) {
-    // Implemented in Task 5
+  updateGhosts(dt: number) {
+    const seconds = dt / 1000;
+    const { ghosts, player, tilemap } = this.state;
+
+    for (const ghost of ghosts) {
+      const effectiveSpeed = ghost.frozen ? ghost.speed * 0.5 : ghost.speed;
+      this.ghostMoveAccumulator += effectiveSpeed * seconds;
+    }
+
+    // Move all ghosts once per accumulated tile
+    while (this.ghostMoveAccumulator >= 1) {
+      this.ghostMoveAccumulator -= 1;
+      for (const ghost of ghosts) {
+        moveGhost(ghost, player.pos, tilemap);
+      }
+    }
   }
 
   checkGhostCollisions() {
-    // Implemented in Task 5
+    const { player, ghosts } = this.state;
+    if (player.invincibleMs > 0) return;
+
+    for (const ghost of ghosts) {
+      if (ghost.pos.x === player.pos.x && ghost.pos.y === player.pos.y) {
+        this.state.lives--;
+        if (this.state.lives <= 0) {
+          this.state.status = 'gameOver';
+        } else {
+          // Respawn player at original spawn position
+          const spawn = findPlayerSpawn(createTilemap());
+          player.pos = { ...spawn };
+          player.invincibleMs = INVINCIBLE_DURATION;
+          this.moveAccumulator = 0;
+        }
+        return; // only one collision per frame
+      }
+    }
   }
 
   private checkRoundClear() {
@@ -188,18 +223,23 @@ export class GameEngine {
   }
 
   nextRound() {
-    // Implemented in Task 9 (round progression)
-    // For now, restart the round
     const prevScore = this.state.score;
     const prevHighScore = this.state.highScore;
     const prevLives = this.state.lives;
-    const prevRound = this.state.round;
+    const nextRoundNum = this.state.round + 1;
+
     this.state = this.createInitialState();
     this.state.status = 'playing';
     this.state.score = prevScore;
     this.state.highScore = prevHighScore;
     this.state.lives = prevLives;
-    this.state.round = prevRound + 1;
+    this.state.round = nextRoundNum;
+
+    // Scale ghosts: more ghosts, faster speed each round
+    const ghostCount = Math.min(nextRoundNum + 1, 4);
+    const speedMult = 1 + (nextRoundNum - 1) * GHOST_SPEED_SCALE;
+    this.state.ghosts = createGhosts(this.state.tilemap, ghostCount, speedMult);
+
     this.moveAccumulator = 0;
     this.ghostMoveAccumulator = 0;
     this.itemSpawnTimer = 0;
