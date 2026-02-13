@@ -6,10 +6,14 @@ import {
   POWER_DOT_SCORE,
   INVINCIBLE_DURATION,
   GHOST_SPEED_SCALE,
+  PHASE_DASH_COOLDOWN,
+  ITEM_SPAWN_INTERVAL,
+  ITEM_SPAWN_BASE_CHANCE,
   MAP_COLS,
 } from './constants';
 import { createTilemap, findPlayerSpawn, countDots, isWalkable } from './tilemap';
 import { createGhosts, moveGhost } from './ghost';
+import { trySpawnItem, activateItem, applyEffects } from './items';
 
 export class GameEngine {
   state: GameState;
@@ -64,9 +68,11 @@ export class GameEngine {
 
     this.updatePlayer(dt);
     this.collectDots();
+    this.collectItems();
     this.updateEffects(dt);
     this.updateGhosts(dt);
     this.checkGhostCollisions();
+    this.spawnItems(dt);
     this.checkRoundClear();
   }
 
@@ -154,18 +160,38 @@ export class GameEngine {
     this.updateHighScore();
   }
 
+  private collectItems() {
+    const { player, items } = this.state;
+    const idx = items.findIndex((i) => i.pos.x === player.pos.x && i.pos.y === player.pos.y);
+    if (idx !== -1) {
+      const item = items[idx];
+      this.state.items.splice(idx, 1);
+      const effect = activateItem(item.type);
+      this.state.activeEffects.push(effect);
+    }
+  }
+
+  private spawnItems(dt: number) {
+    this.itemSpawnTimer += dt;
+    if (this.itemSpawnTimer >= ITEM_SPAWN_INTERVAL) {
+      this.itemSpawnTimer = 0;
+      const chance = ITEM_SPAWN_BASE_CHANCE * (1 + (this.state.round - 1) * 0.1);
+      const item = trySpawnItem(this.state.tilemap, this.state.items, chance);
+      if (item) this.state.items.push(item);
+    }
+  }
+
   private updateEffects(dt: number) {
     this.state.activeEffects = this.state.activeEffects
       .map((e) => ({ ...e, remainingMs: e.remainingMs - dt }))
       .filter((e) => e.remainingMs > 0);
 
-    // Reset combo if no beacon active
-    const hasBeacon = this.state.activeEffects.some((e) => e.type === 'combo_beacon');
-    if (!hasBeacon) this.state.comboMultiplier = 1;
-
-    // Reset dash if no phase_dash active
-    const hasDash = this.state.activeEffects.some((e) => e.type === 'phase_dash');
-    if (!hasDash) this.state.player.activeDash = false;
+    // Apply active effects
+    this.state.comboMultiplier = applyEffects(this.state.activeEffects, {
+      ghosts: this.state.ghosts,
+      player: this.state.player,
+      comboMultiplier: this.state.comboMultiplier,
+    });
   }
 
   updateGhosts(dt: number) {
@@ -217,9 +243,14 @@ export class GameEngine {
     this.state.player.nextDirection = dir;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  useSkill(_key: string) {
-    // Implemented in Task 6 (items)
+  useSkill(key: string) {
+    // Q = Phase Dash (if not on cooldown and not already active)
+    if ((key === 'q' || key === ' ') && !this.state.player.activeDash && this.state.player.dashCooldown <= 0) {
+      const effect = activateItem('phase_dash');
+      this.state.activeEffects.push(effect);
+      this.state.player.activeDash = true;
+      this.state.player.dashCooldown = PHASE_DASH_COOLDOWN;
+    }
   }
 
   nextRound() {
