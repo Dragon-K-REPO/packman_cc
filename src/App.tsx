@@ -9,6 +9,7 @@ import { MenuScreen } from './ui/MenuScreen';
 import { GameOverScreen } from './ui/GameOverScreen';
 import { RoundClearScreen } from './ui/RoundClearScreen';
 import { PauseOverlay } from './ui/PauseOverlay';
+import { renderGameToText } from './game/testHooks';
 import './ui/ui.css';
 
 function App() {
@@ -39,6 +40,14 @@ function App() {
     if (!ctx) return;
 
     input.attach();
+
+    // Testing hooks for Playwright E2E
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).render_game_to_text = () => renderGameToText(engine.getSnapshot());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).advanceTime = (ms: number) => engine.update(ms);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).setDirection = (dir: string) => engine.setDirection(dir as any);
 
     const handleGlobalKeys = (e: KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') {
