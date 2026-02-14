@@ -23,6 +23,7 @@ export function createGhosts(
     behavior: (i === 0 ? 'chase' : 'patrol') as GhostBehavior,
     speed: GHOST_BASE_SPEED * speedMultiplier,
     frozen: false,
+    moveProgress: 0,
   }));
 }
 

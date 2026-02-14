@@ -17,8 +17,6 @@ import { trySpawnItem, activateItem, applyEffects } from './items';
 
 export class GameEngine {
   state: GameState;
-  private moveAccumulator = 0;
-  /* package */ ghostMoveAccumulator = 0;
   /* package */ itemSpawnTimer = 0;
 
   constructor() {
@@ -44,6 +42,7 @@ export class GameEngine {
         invincibleMs: 0,
         activeDash: false,
         dashCooldown: 0,
+        moveProgress: 0,
       },
       ghosts: [],
       items: [],
@@ -58,8 +57,6 @@ export class GameEngine {
     this.state = this.createInitialState();
     this.state.status = 'playing';
     this.state.ghosts = createGhosts(this.state.tilemap, 2, 1);
-    this.moveAccumulator = 0;
-    this.ghostMoveAccumulator = 0;
     this.itemSpawnTimer = 0;
   }
 
@@ -90,12 +87,12 @@ export class GameEngine {
       player.dashCooldown = Math.max(0, player.dashCooldown - dt);
     }
 
-    // Accumulate movement progress
-    this.moveAccumulator += player.speed * seconds;
+    // Accumulate movement progress on the player entity
+    player.moveProgress += player.speed * seconds;
 
     // Move one tile at a time while we have enough accumulated
-    while (this.moveAccumulator >= 1) {
-      this.moveAccumulator -= 1;
+    while (player.moveProgress >= 1) {
+      player.moveProgress -= 1;
 
       // Try nextDirection first (buffered input for cornering)
       if (player.nextDirection) {
@@ -103,6 +100,7 @@ export class GameEngine {
         if (this.canMoveTo(next, tilemap)) {
           player.direction = player.nextDirection;
           player.nextDirection = null;
+          player.moveProgress = 0; // reset visual offset on direction change
         }
       }
 
@@ -119,9 +117,15 @@ export class GameEngine {
         this.collectDots();
       } else {
         // Hit a wall — stop accumulating
-        this.moveAccumulator = 0;
+        player.moveProgress = 0;
         break;
       }
+    }
+
+    // Wall proximity guard: if next tile ahead is a wall, clamp visual offset
+    const ahead = this.getNextPos(player.pos, player.direction);
+    if (!this.canMoveTo(ahead, tilemap)) {
+      player.moveProgress = 0;
     }
   }
 
@@ -200,13 +204,10 @@ export class GameEngine {
 
     for (const ghost of ghosts) {
       const effectiveSpeed = ghost.frozen ? ghost.speed * 0.5 : ghost.speed;
-      this.ghostMoveAccumulator += effectiveSpeed * seconds;
-    }
+      ghost.moveProgress += effectiveSpeed * seconds;
 
-    // Move all ghosts once per accumulated tile
-    while (this.ghostMoveAccumulator >= 1) {
-      this.ghostMoveAccumulator -= 1;
-      for (const ghost of ghosts) {
+      while (ghost.moveProgress >= 1) {
+        ghost.moveProgress -= 1;
         moveGhost(ghost, player.pos, tilemap);
       }
     }
@@ -226,7 +227,7 @@ export class GameEngine {
           const spawn = findPlayerSpawn(createTilemap());
           player.pos = { ...spawn };
           player.invincibleMs = INVINCIBLE_DURATION;
-          this.moveAccumulator = 0;
+          player.moveProgress = 0;
         }
         return; // only one collision per frame
       }
@@ -271,8 +272,6 @@ export class GameEngine {
     const speedMult = 1 + (nextRoundNum - 1) * GHOST_SPEED_SCALE;
     this.state.ghosts = createGhosts(this.state.tilemap, ghostCount, speedMult);
 
-    this.moveAccumulator = 0;
-    this.ghostMoveAccumulator = 0;
     this.itemSpawnTimer = 0;
   }
 

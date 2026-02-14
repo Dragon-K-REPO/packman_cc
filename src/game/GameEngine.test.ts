@@ -129,6 +129,7 @@ describe('GameEngine', () => {
           behavior: 'chase',
           speed: 3,
           frozen: false,
+          moveProgress: 0,
         },
       ];
       engine.checkGhostCollisions();

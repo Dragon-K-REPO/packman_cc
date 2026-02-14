@@ -1,6 +1,16 @@
 import { GameState, TileType } from './types';
 import { TILE_SIZE, MAP_COLS, MAP_ROWS, COLOR } from './constants';
 
+function directionDelta(dir: string): [number, number] {
+  switch (dir) {
+    case 'right': return [1, 0];
+    case 'left':  return [-1, 0];
+    case 'down':  return [0, 1];
+    case 'up':    return [0, -1];
+    default:      return [0, 0];
+  }
+}
+
 let frameCount = 0;
 
 export function renderGame(ctx: CanvasRenderingContext2D, state: GameState) {
@@ -121,9 +131,10 @@ function renderItems(ctx: CanvasRenderingContext2D, state: GameState) {
 }
 
 function renderPlayer(ctx: CanvasRenderingContext2D, state: GameState) {
-  const { pos, invincibleMs, direction, activeDash } = state.player;
-  const cx = pos.x * TILE_SIZE + TILE_SIZE / 2;
-  const cy = pos.y * TILE_SIZE + TILE_SIZE / 2;
+  const { pos, invincibleMs, direction, activeDash, moveProgress } = state.player;
+  const [dx, dy] = directionDelta(direction);
+  const cx = (pos.x + dx * moveProgress) * TILE_SIZE + TILE_SIZE / 2;
+  const cy = (pos.y + dy * moveProgress) * TILE_SIZE + TILE_SIZE / 2;
 
   // Blink during invincibility
   if (invincibleMs > 0 && Math.floor(invincibleMs / 100) % 2 === 0) return;
@@ -169,8 +180,9 @@ function renderGhosts(ctx: CanvasRenderingContext2D, state: GameState) {
   const now = Date.now();
 
   for (const ghost of state.ghosts) {
-    const cx = ghost.pos.x * TILE_SIZE + TILE_SIZE / 2;
-    const cy = ghost.pos.y * TILE_SIZE + TILE_SIZE / 2;
+    const [gdx, gdy] = directionDelta(ghost.direction);
+    const cx = (ghost.pos.x + gdx * ghost.moveProgress) * TILE_SIZE + TILE_SIZE / 2;
+    const cy = (ghost.pos.y + gdy * ghost.moveProgress) * TILE_SIZE + TILE_SIZE / 2;
     const color = COLOR.GHOST[ghost.id % COLOR.GHOST.length];
 
     const frozenColor = '#6666ff';
@@ -212,9 +224,14 @@ function renderGhosts(ctx: CanvasRenderingContext2D, state: GameState) {
     ctx.arc(cx + 4, cy - 4, 3, 0, Math.PI * 2);
     ctx.fill();
 
-    // Pupils — look toward player
-    const dx = state.player.pos.x - ghost.pos.x;
-    const dy = state.player.pos.y - ghost.pos.y;
+    // Pupils — look toward player (use interpolated positions)
+    const [pdx, pdy] = directionDelta(state.player.direction);
+    const playerVisualX = state.player.pos.x + pdx * state.player.moveProgress;
+    const playerVisualY = state.player.pos.y + pdy * state.player.moveProgress;
+    const ghostVisualX = ghost.pos.x + gdx * ghost.moveProgress;
+    const ghostVisualY = ghost.pos.y + gdy * ghost.moveProgress;
+    const dx = playerVisualX - ghostVisualX;
+    const dy = playerVisualY - ghostVisualY;
     const pupilShift = Math.min(1.5, Math.sqrt(dx * dx + dy * dy) * 0.1);
     const angle = Math.atan2(dy, dx);
     const px = Math.cos(angle) * pupilShift;
@@ -232,9 +249,10 @@ function renderDashTrail(ctx: CanvasRenderingContext2D, state: GameState) {
   if (!state.player.activeDash) return;
 
   // Draw a subtle trail behind the player
-  const { pos, direction } = state.player;
-  const cx = pos.x * TILE_SIZE + TILE_SIZE / 2;
-  const cy = pos.y * TILE_SIZE + TILE_SIZE / 2;
+  const { pos, direction, moveProgress } = state.player;
+  const [ddx, ddy] = directionDelta(direction);
+  const cx = (pos.x + ddx * moveProgress) * TILE_SIZE + TILE_SIZE / 2;
+  const cy = (pos.y + ddy * moveProgress) * TILE_SIZE + TILE_SIZE / 2;
 
   const trailDirs: Record<string, [number, number]> = {
     right: [-1, 0],

@@ -18,6 +18,7 @@ export interface PlayerState {
   invincibleMs: number;
   activeDash: boolean;
   dashCooldown: number;
+  moveProgress: number;  // 0..1 sub-tile visual interpolation
 }
 
 export interface GhostState {
@@ -27,6 +28,7 @@ export interface GhostState {
   behavior: GhostBehavior;
   speed: number;
   frozen: boolean;
+  moveProgress: number;  // 0..1 sub-tile visual interpolation
 }
 
 export interface ItemDrop {
