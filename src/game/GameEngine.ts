@@ -87,6 +87,17 @@ export class GameEngine {
       player.dashCooldown = Math.max(0, player.dashCooldown - dt);
     }
 
+    // Process buffered direction change every frame
+    // (must run BEFORE wall guard so player can turn while facing a wall)
+    if (player.nextDirection) {
+      const next = this.getNextPos(player.pos, player.nextDirection);
+      if (this.canMoveTo(next, tilemap)) {
+        player.direction = player.nextDirection;
+        player.nextDirection = null;
+        player.moveProgress = 0;
+      }
+    }
+
     // Accumulate movement progress on the player entity
     player.moveProgress += player.speed * seconds;
 
@@ -94,13 +105,12 @@ export class GameEngine {
     while (player.moveProgress >= 1) {
       player.moveProgress -= 1;
 
-      // Try nextDirection first (buffered input for cornering)
+      // Try nextDirection for cornering during multi-tile frames
       if (player.nextDirection) {
         const next = this.getNextPos(player.pos, player.nextDirection);
         if (this.canMoveTo(next, tilemap)) {
           player.direction = player.nextDirection;
           player.nextDirection = null;
-          player.moveProgress = 0; // reset visual offset on direction change
         }
       }
 
@@ -209,6 +219,12 @@ export class GameEngine {
       while (ghost.moveProgress >= 1) {
         ghost.moveProgress -= 1;
         moveGhost(ghost, player.pos, tilemap);
+      }
+
+      // Ghost wall proximity guard: prevent visual wall penetration
+      const nextGhostPos = this.getNextPos(ghost.pos, ghost.direction);
+      if (!isWalkable(tilemap, nextGhostPos.x, nextGhostPos.y)) {
+        ghost.moveProgress = 0;
       }
     }
   }
